@@ -4,6 +4,14 @@ import ros2_numpy as rnp
 from sensor_msgs.msg import PointCloud2, PointField, Image
 
 class TestImages(unittest.TestCase):
+    def test_owned_strided_image(self):
+        arr = np.arange(4 * 6 * 3, dtype=np.uint8).reshape(4, 6, 3)[:, ::2]
+        msg = rnp.msgify(Image, arr, encoding='rgb8')
+        self.assertEqual(bytes(msg.data), arr.tobytes())
+        self.assertEqual(msg.step, 9)
+        arr[:] = 0
+        self.assertTrue(any(msg.data))
+
     def test_roundtrip_rgb8(self):
         arr = np.random.randint(0, 256, size=(240, 360, 3)).astype(np.uint8)
         msg = rnp.msgify(Image, arr, encoding='rgb8')

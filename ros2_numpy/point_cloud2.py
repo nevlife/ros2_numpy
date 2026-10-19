@@ -266,6 +266,23 @@ def get_xyz_points(cloud_array, remove_nans=True, dtype=float):
 
     return points
 
+def get_xyz_points_view(cloud_array, readonly=True):
+    '''Return an XYZ view, preserving dtype, strides and nonfinite values.
+
+    XYZ must be scalar fields with the same dtype at consecutive offsets.
+    The array retains the input buffer; its owner may still modify the data.
+    Set readonly=False to allow writes, including through a DLPack consumer.
+    '''
+    fields = [cloud_array.dtype.fields[name] for name in ('x', 'y', 'z')]
+    dtype, offset = fields[0][:2]
+    if dtype.subdtype or any(field[0] != dtype or field[1] != offset + i * dtype.itemsize
+                            for i, field in enumerate(fields)):
+        raise ValueError('XYZ fields must have the same scalar dtype and consecutive offsets')
+    return np.lib.stride_tricks.as_strided(
+        cloud_array['x'], shape=cloud_array.shape + (3,),
+        strides=cloud_array.strides + (dtype.itemsize,), writeable=not readonly)
+
+
 def pointcloud2_to_xyz_array(cloud_msg, remove_nans=True):
     return get_xyz_points(
         pointcloud2_to_array(cloud_msg), remove_nans=remove_nans)

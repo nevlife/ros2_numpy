@@ -5,6 +5,38 @@ import ros2_numpy as rnp
 from sensor_msgs.msg import PointCloud2, PointField, Image
 
 class TestPointClouds(unittest.TestCase):
+    def test_writable_xyz_view(self):
+        points = np.zeros(2, dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4')])
+        view = rnp.point_cloud2.get_xyz_points_view(points, readonly=False)
+        view[1, 2] = 42
+        self.assertEqual(points['z'][1], 42)
+        del points
+        self.assertEqual(view[1, 2], 42)
+
+    def test_xyz_view(self):
+        for dtype in ('f4', 'f8', '>f4'):
+            points = np.zeros((3, 6), dtype=[
+                ('intensity', 'u4'), ('x', dtype), ('y', dtype), ('z', dtype)])
+            points['x'] = np.arange(18).reshape(3, 6)
+            points['y'] = 2
+            points['z'] = np.nan
+            for source in (points, points[:, ::2], points[::-1, ::-1]):
+                view = rnp.point_cloud2.get_xyz_points_view(source)
+                self.assertTrue(np.shares_memory(view, source))
+                self.assertEqual(view.dtype, np.dtype(dtype))
+                self.assertFalse(view.flags.writeable)
+                np.testing.assert_equal(view[..., 0], source['x'])
+                np.testing.assert_equal(view[..., 1], source['y'])
+                self.assertTrue(np.isnan(view[..., 2]).all())
+            points['x'] = 42
+            self.assertTrue((view[..., 0] == 42).all())
+
+    def test_xyz_view_rejects_incompatible_fields(self):
+        for dtype in ([('x', 'f4'), ('y', 'f8'), ('z', 'f4')],
+                      [('x', 'f4'), ('intensity', 'f4'), ('y', 'f4'), ('z', 'f4')]):
+            with self.assertRaises(ValueError):
+                rnp.point_cloud2.get_xyz_points_view(np.zeros(3, dtype=dtype))
+
     def makeArray(self, npoints):
         points_arr = np.zeros((npoints,), dtype=[
             ('x', np.float32),
