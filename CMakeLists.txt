@@ -19,6 +19,7 @@ if(BUILD_TESTING)
   ament_add_pytest_test(geometry test/test_geometry.py)
   ament_add_pytest_test(quaternions test/test_quat.py)
   ament_add_pytest_test(laserscan test/test_laserscan.py)
+  ament_add_pytest_test(type_adapter test/test_type_adapter.py)
 endif()
 
 ##############
